@@ -12,32 +12,31 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Set up Java 17
+      - name: Set up Java 21
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
+          java-version: '21'
           distribution: 'temurin'
 
-      - name: Setup Gradle
+      - name: Setup Gradle 9.3.1
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.11.1'
+          gradle-version: '9.3.1'
 
       - name: Prepare Android Build Files
         run: |
-          # 1. Create keystore
+          # 1. Create debug keystore
           keytool -genkey -v -keystore debug.keystore -alias androiddebugkey -storepass android -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
           
-          # 2. Create environment secrets in root and app folder
+          # 2. Setup secrets & environment files
           echo "GEMINI_API_KEY=AIzaSy_demo_key" > .env
           echo "DEFAULT_MODEL_NAME=gemini-2.5-flash" >> .env
           cp .env app/.env 2>/dev/null || true
           
-          # 3. Create secrets properties
           touch secrets.properties
           echo "GEMINI_API_KEY=AIzaSy_demo_key" >> secrets.properties
           
-          # 4. Create google-services.json in app directory
+          # 3. Create mock google-services.json
           mkdir -p app
           cat << 'EOF' > app/google-services.json
           {
@@ -68,7 +67,7 @@ jobs:
       - name: Build Debug APK
         run: |
           gradle assembleDebug --no-daemon --stacktrace \
-            -Dorg.gradle.jvmargs="-Xmx4096m -XX:MaxMetaspaceSize=1024m" \
+            -Dorg.gradle.jvmargs="-Xmx4096m -XX:MaxMetaspaceSize=1024m -Djava.awt.headless=true" \
             -Dsecrets.ignoreList="[]"
 
       - name: Upload APK Artifact
