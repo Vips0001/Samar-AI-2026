@@ -12,23 +12,25 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up JDK 21
+      - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          java-version: '21'
+          java-version: '17'
           distribution: 'temurin'
 
-      - name: Setup Gradle
+      - name: Setup Gradle 8.11.1
         uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
 
-      - name: Create Keystore & Environment Files
+      - name: Prepare Keystore and Environment
         run: |
           keytool -genkey -v -keystore debug.keystore -alias androiddebugkey -storepass android -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
           touch .env
           echo "GEMINI_API_KEY=AIzaSy_demo_key" >> .env
 
       - name: Build Debug APK
-        run: gradle assembleDebug --no-daemon --stacktrace -Djava.awt.headless=true -Dorg.gradle.jvmargs="-Xmx4096m -XX:MaxMetaspaceSize=1024m -Djava.awt.headless=true"
+        run: gradle assembleDebug -x test --stacktrace
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
