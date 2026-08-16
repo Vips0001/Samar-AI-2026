@@ -18,27 +18,26 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.11.1'
 
-      - name: Generate Config & Keystore
+      - name: Prepare Android Build Files
         run: |
-          # 1. Create debug keystore
+          # 1. Create keystore
           keytool -genkey -v -keystore debug.keystore -alias androiddebugkey -storepass android -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
           
-          # 2. Setup SDK path for Gradle
-          echo "sdk.dir=$ANDROID_HOME" > local.properties
-          
-          # 3. Setup Secrets & Env
+          # 2. Create environment secrets in root and app folder
           echo "GEMINI_API_KEY=AIzaSy_demo_key" > .env
           echo "DEFAULT_MODEL_NAME=gemini-2.5-flash" >> .env
+          cp .env app/.env 2>/dev/null || true
           
-          # 4. Create mock google-services.json
+          # 3. Create secrets properties
+          touch secrets.properties
+          echo "GEMINI_API_KEY=AIzaSy_demo_key" >> secrets.properties
+          
+          # 4. Create google-services.json in app directory
           mkdir -p app
           cat << 'EOF' > app/google-services.json
           {
@@ -50,14 +49,16 @@ jobs:
             "client": [
               {
                 "client_info": {
-                  "mobilesdk_app_id": "1:1234567890:android:abcdef",
+                  "mobilesdk_app_id": "1:1234567890:android:abcdef12345",
                   "android_client_info": {
                     "package_name": "com.aistudio.samar.ai"
                   }
                 },
                 "oauth_client": [],
-                "api_key": [{ "current_key": "AIzaSyDummyKey" }],
-                "services": { "analytics_service": { "status": 1 } }
+                "api_key": [{ "current_key": "AIzaSyDummyKey123" }],
+                "services": {
+                  "analytics_service": { "status": 1 }
+                }
               }
             ],
             "configuration_version": "1"
@@ -66,17 +67,12 @@ jobs:
 
       - name: Build Debug APK
         run: |
-          gradle assembleDebug \
-            -x test \
-            -x lint \
-            -x verifyRoborazziDebug \
-            --no-daemon \
-            --stacktrace \
+          gradle assembleDebug --no-daemon --stacktrace \
             -Dorg.gradle.jvmargs="-Xmx4096m -XX:MaxMetaspaceSize=1024m" \
-            -Dksp.use.ksp2=false
+            -Dsecrets.ignoreList="[]"
 
-      - name: Upload APK
+      - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: SamarAI-APK
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: app/build/outputs/apk/debug/*.apk
