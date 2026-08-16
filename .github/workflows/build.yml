@@ -23,16 +23,55 @@ jobs:
         with:
           gradle-version: '8.11.1'
 
-      - name: Prepare Keystore and Environment
+      - name: Create Required Configuration Files
         run: |
+          # 1. Generate debug signing keystore
           keytool -genkey -v -keystore debug.keystore -alias androiddebugkey -storepass android -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          
+          # 2. Generate environment secrets
           touch .env
           echo "GEMINI_API_KEY=AIzaSy_demo_key" >> .env
+          echo "DEFAULT_MODEL_NAME=gemini-2.5-flash" >> .env
+          
+          # 3. Create Google Services JSON config
+          mkdir -p app
+          cat << 'EOF' > app/google-services.json
+          {
+            "project_info": {
+              "project_number": "123456789",
+              "project_id": "samar-ai-app",
+              "storage_bucket": "samar-ai-app.appspot.com"
+            },
+            "client": [
+              {
+                "client_info": {
+                  "mobilesdk_app_id": "1:123456789:android:abcdef",
+                  "android_client_info": {
+                    "package_name": "com.aistudio.samar.ai"
+                  }
+                },
+                "oauth_client": [],
+                "api_key": [
+                  {
+                    "current_key": "AIzaSyDummyKey123456"
+                  }
+                ],
+                "services": {
+                  "analytics_service": { "status": 1 },
+                  "appinvite_service": { "status": 1, "other_platform_oauth_client": [] },
+                  "ads_service": { "status": 1 },
+                  "firebase_appcheck_service": { "status": 1 }
+                }
+              }
+            ],
+            "configuration_version": "1"
+          }
+          EOF
 
       - name: Build Debug APK
-        run: gradle assembleDebug -x test --stacktrace
+        run: gradle :app:assembleDebug -x test -x lint -x verifyRoborazziDebug --no-daemon --stacktrace -Djava.awt.headless=true -Dorg.gradle.jvmargs="-Xmx4096m -XX:MaxMetaspaceSize=1024m -Djava.awt.headless=true"
 
-      - name: Upload APK Artifact
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: SamarAI-APK
