@@ -9,58 +9,48 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Set up JDK 17
+      - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Setup Gradle 8.11.1
+      - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.11.1'
 
-      - name: Create Required Configuration Files
+      - name: Prepare Configuration & Keystore
         run: |
-          # 1. Generate debug signing keystore
+          # 1. Create debug keystore in root project directory
           keytool -genkey -v -keystore debug.keystore -alias androiddebugkey -storepass android -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
           
-          # 2. Generate environment secrets
-          touch .env
-          echo "GEMINI_API_KEY=AIzaSy_demo_key" >> .env
-          echo "DEFAULT_MODEL_NAME=gemini-2.5-flash" >> .env
+          # 2. Create environment file
+          echo "GEMINI_API_KEY=AIzaSy_demo_key" > .env
           
-          # 3. Create Google Services JSON config
-          mkdir -p app
+          # 3. Create dummy google-services.json
           cat << 'EOF' > app/google-services.json
           {
             "project_info": {
-              "project_number": "123456789",
-              "project_id": "samar-ai-app",
-              "storage_bucket": "samar-ai-app.appspot.com"
+              "project_number": "1234567890",
+              "project_id": "samar-ai",
+              "storage_bucket": "samar-ai.appspot.com"
             },
             "client": [
               {
                 "client_info": {
-                  "mobilesdk_app_id": "1:123456789:android:abcdef",
+                  "mobilesdk_app_id": "1:1234567890:android:abcde12345",
                   "android_client_info": {
                     "package_name": "com.aistudio.samar.ai"
                   }
                 },
                 "oauth_client": [],
-                "api_key": [
-                  {
-                    "current_key": "AIzaSyDummyKey123456"
-                  }
-                ],
+                "api_key": [{ "current_key": "AIzaSyDummyKey" }],
                 "services": {
-                  "analytics_service": { "status": 1 },
-                  "appinvite_service": { "status": 1, "other_platform_oauth_client": [] },
-                  "ads_service": { "status": 1 },
-                  "firebase_appcheck_service": { "status": 1 }
+                  "analytics_service": { "status": 1 }
                 }
               }
             ],
@@ -68,11 +58,11 @@ jobs:
           }
           EOF
 
-      - name: Build Debug APK
-        run: gradle :app:assembleDebug -x test -x lint -x verifyRoborazziDebug --no-daemon --stacktrace -Djava.awt.headless=true -Dorg.gradle.jvmargs="-Xmx4096m -XX:MaxMetaspaceSize=1024m -Djava.awt.headless=true"
+      - name: Build APK
+        run: gradle assembleDebug -x test -x lint --no-daemon --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: SamarAI-APK
-          path: app/build/outputs/apk/debug/*.apk
+          path: app/build/outputs/apk/debug/app-debug.apk
