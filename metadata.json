@@ -1,0 +1,6 @@
+{
+  "name": "Samar AI",
+  "description": "Samar AI - Modern AI Chatbot featuring limitless image and video generation, voice-to-text, multimodal attachments, Room database chat history, markdown rendering, token analytics, and customizable themes. All rights and intellectual property dedicated to Samar.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
